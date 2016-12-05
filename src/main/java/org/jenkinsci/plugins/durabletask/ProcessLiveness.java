@@ -55,19 +55,24 @@ final class ProcessLiveness {
     public static boolean isAlive(VirtualChannel channel, int pid, Launcher launcher) throws IOException, InterruptedException {
         Boolean working = workingLaunchers.get(launcher);
         if (working == null) {
+            LOGGER.info("working == null; pid = " + pid);
             // Check to see if our logic correctly reports that an unlikely PID is not running.
             working = !_isAlive(channel, 9999, launcher);
+            LOGGER.info("working == " + working + "; pid = " + 9999);
             workingLaunchers.put(launcher, working);
             if (working) {
-                LOGGER.log(Level.FINE, "{0} on {1} appears to be working", new Object[] {launcher, channel});
+                LOGGER.log(Level.INFO, "pid {0} {1} on {2} appears to be working", new Object[] {pid, launcher, channel});
             } else {
                 LOGGER.log(Level.WARNING, "{0} on {1} does not seem able to determine whether processes are alive or not", new Object[] {launcher, channel});
                 // TODO Channel.toString should report slave name, but would be nice to also report OS
             }
         }
+        LOGGER.info("working == " + working + "; pid = " + pid);
         if (!working) {
+            LOGGER.info("!working, return isAlive = true");
             return true;
         }
+        LOGGER.info("Dive deeper");
         return _isAlive(channel, pid, launcher);
     }
 
@@ -75,7 +80,7 @@ final class ProcessLiveness {
         if (launcher instanceof Launcher.LocalLauncher || launcher instanceof Launcher.RemoteLauncher) {
             try {
                 boolean alive = channel.call(new Liveness(pid));
-                LOGGER.log(Level.FINER, "{0} is alive? {1}", new Object[] {pid, alive});
+                LOGGER.log(Level.INFO, "{0} is alive? {1}", new Object[] {pid, alive});
                 return alive;
             } catch (RuntimeException x) {
                 LOGGER.log(Level.WARNING, "cannot determine liveness of " + pid, x);
@@ -84,6 +89,10 @@ final class ProcessLiveness {
         } else {
             // Using a special launcher; let it decide how to do this.
             // TODO perhaps this should be a method in Launcher, with the following fallback in DecoratedLauncher:
+            LOGGER.info("ask launcher for pid = " + pid + "on launcher " + launcher.getClass().getName());
+
+           launcher.launch().cmds("hostname").join();
+
             return launcher.launch().cmds("ps", "-o", "pid=", Integer.toString(pid)).quiet(true).join() == 0;
         }
     }

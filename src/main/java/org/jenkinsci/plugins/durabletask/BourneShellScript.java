@@ -39,6 +39,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import jenkins.security.MasterToSlaveCallable;
@@ -48,6 +49,8 @@ import org.kohsuke.stapler.DataBoundConstructor;
  * Runs a Bourne shell script on a Unix node using {@code nohup}.
  */
 public final class BourneShellScript extends FileMonitoringTask {
+
+    private static final Logger LOGGER = Logger.getLogger(BourneShellScript.class.getName());
 
     /** Number of times we will show launch diagnostics in a newly encountered workspace before going mute to save resources. */
     private static /* not final */ int NOVEL_WORKSPACE_DIAGNOSTICS_COUNT = Integer.getInteger(BourneShellScript.class.getName() + ".NOVEL_WORKSPACE_DIAGNOSTICS_COUNT", 10);
@@ -181,6 +184,7 @@ public final class BourneShellScript extends FileMonitoringTask {
 
         @Override public Integer exitStatus(FilePath workspace, Launcher launcher) throws IOException, InterruptedException {
             Integer status = super.exitStatus(workspace, launcher);
+            LOGGER.info("Status from super == " + status);
             if (status != null) {
                 return status;
             }
@@ -190,13 +194,17 @@ public final class BourneShellScript extends FileMonitoringTask {
                 // then if we still don't have the exit code, use fake exit code to distinguish from 0 (success) and 1+ (observed failure)
                 // TODO would be better to have exitStatus accept a TaskListener so we could print an informative message
                 status = super.exitStatus(workspace, launcher);
+                LOGGER.info("Status from super second time == " + status);
                 if (status == null) {
                     status = -1;
                 }
+                LOGGER.info("Status == " + status);
                 return status;
             } else if (_pid == 0 && /* compatibility */ startTime > 0 && System.currentTimeMillis() - startTime > 1000 * LAUNCH_FAILURE_TIMEOUT) {
+                LOGGER.info("Status == -2");
                 return -2; // apparently never started
             }
+            LOGGER.info("Status return null ");
             return null;
         }
 
